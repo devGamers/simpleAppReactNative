@@ -3,24 +3,28 @@ import { StyleSheet, Dimensions, Platform } from 'react-native'
 const { height } = Dimensions.get('window')
 
 const styles = StyleSheet.create({
-    add: {
-        width: 60,
-        height: 60,
-        backgroundColor: '#457ce0',
-        borderRadius: 60,
-        justifyContent: 'center',
-        alignItems: 'center',
-        position: 'absolute',
-        bottom: 10,
-        right: 10,
-        elevation: 5,
+    circle: {
+        padding: 8,
+        backgroundColor: '#00000040',
+        borderRadius: 30,
+        marginLeft: 10,
+    },
+    ombre: {
+        shadowColor: '#000',
+        shadowOpacity: .2,
+        shadowRadius: 1,
+        shadowOffset: { width: 0, height: 1 },
+        elevation: 4,
+    },
+    rectangle: {
+        padding: 10, marginBottom: 10,
+        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        borderRadius: 12,
         shadowColor: '#000',
         shadowOpacity: .3,
-    },
-    addText: {
-        color: '#fff',
-        fontSize: 25,
-        fontFamily: 'avenirBlack'
+        shadowRadius: 20,
+        shadowOffset: { width: 0, height: 10 },
+        elevation: 3,
     },
     divider: {
         borderColor: '#e6e6f2',
@@ -29,7 +33,6 @@ const styles = StyleSheet.create({
     inline: {
         flexDirection: 'row',
         alignItems: 'center'
-        //justifyContent: 'space-evenly'
     },
     block: {
         backgroundColor: '#ffffffdb',
@@ -83,7 +86,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderRadius: 50,
         padding: 15,
-        marginTop: 20,
+        marginTop: 10,
         marginBottom: 5
     },
     firstColor : {
@@ -91,15 +94,6 @@ const styles = StyleSheet.create({
     },
     secondColor: {
         color: '#3cadd5'
-    },
-    arrow : {
-        height : 35,
-        width : "15%",
-        borderRadius : 50,
-        justifyContent: "center", 
-        marginTop: 5,
-        backgroundColor: '#3cadd5',
-        alignItems: 'center'
     },
     bsheader: {
         backgroundColor: '#FFFFFF',
@@ -111,7 +105,7 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         elevation: 2,
-        marginTop: height-230,
+        marginTop: height * .6,
         alignItems: 'center',
     },
     panelHandle: {
@@ -124,6 +118,7 @@ const styles = StyleSheet.create({
     bottomShettContent: {
         padding: 20,
         backgroundColor: 'white',
+        alignItems: 'center'
     },
     titleBlock : {
         marginTop: 20,
@@ -145,7 +140,7 @@ const styles = StyleSheet.create({
         textAlign: "center",
         fontSize: 12,
         fontFamily: "avenirBook",
-        marginTop: 5,
+        //marginTop: 2,
     },
     logo : {
         resizeMode: "center", 

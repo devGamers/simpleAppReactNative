@@ -1,29 +1,103 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { Text, View, TouchableOpacity, Image, StyleSheet, Animated, TextInput, Alert } from 'react-native'
+import React, { useEffect, useRef, useState, useLayoutEffect } from 'react'
+import { Text, View, TouchableOpacity, Image, StyleSheet, Animated, TextInput, Alert, Platform, KeyboardAvoidingView } from 'react-native'
 import BottomSheet from 'reanimated-bottom-sheet'
-import { MaterialIcons, Entypo } from '@expo/vector-icons'
+import { MaterialIcons, Entypo, Ionicons } from '@expo/vector-icons'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import firebase from '../../helpers/firebase'
 
 import Style from '../../helpers/Styles'
+import Loading from '../../component/Loading'
 
-const Home = () => {
-
-    const data = []
+const Home = (props) => {
+    const type = Platform.OS == 'ios' ? 'ios' : 'md';
     const [produit, setProduit] = useState('')
     const [prix, setPrix] = useState('')
-    const [id, setId] = useState('')
-    const [action, setAction] = useState(0)
+    const [data, setData] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [user, setUser] = useState(false)
 
-    const getDate = () => {
-        for (let i = 1; i <= 20; i++) data.push({ id: i, title: 'Pomme ' + i, prix: 100*i })
+    const bs = useRef(null)
+    const scrollY = useRef(new Animated.Value(0)).current
+
+    const getUser = async () => {
+        const connect = await AsyncStorage.getItem('@user')
+        if (connect) {
+            setUser(JSON.parse(connect))
+        }
+    }
+
+    const getData = async () => {
+        let result = []
+        if (user) {
+            await firebase.database().ref('produits/' + user.uid).on('value', (snapshot) => {
+                if (snapshot.val() != null) {
+                    result = Object.values(snapshot.val()).sort((a, b) => a.id < b.id)
+                }
+                setData(result)
+                setLoading(false)
+            });
+        }
+    }
+
+    const saveData = () => {
+        if (produit && prix) {
+            let existe = data.filter(item => item.libelle == produit)
+            if (existe.length > 0) {
+                Alert.alert( 'Simple App',
+                    'Ce produit existe déjà. Merci',
+                    [{text: 'Ok'}]
+                );
+            } else {
+                bs.current.snapTo(1)
+                let id = Math.floor(Date.now() / 1000),
+                    ref = firebase.database().ref('produits/' + user.uid),
+                    newProduit = ref.push();
+                newProduit.set({
+                    id,
+                    libelle: produit,
+                    prix,
+                    ref: newProduit.key
+                }).then((data) => {
+                    setProduit('')
+                    setPrix('')
+                }).catch((error)=>{
+                    Alert.alert('Simple App',
+                        "Vérifier votre connexion.",
+                        [{ text: 'Ok' }]
+                    );
+                })
+            }
+        } else {
+            Alert.alert( 'Simple App',
+                'Entrer toutes les informations. Merci',
+                [{text: 'Ok'}]
+            );
+        }
+    }
+
+    const delData = ref => {
+        firebase.database().ref('produits/' + user.uid + '/' + ref).remove()
     }
 
     useEffect(() => {
-        getDate()
-    }, []);
+        getUser()
+    }, [])
 
-    const scrollY = useRef(new Animated.Value(0)).current
-    const bs = React.createRef()
+    useEffect(() => {
+        getData()
+    }, [user])
 
+    useLayoutEffect(() => {
+        props.navigation.setOptions({
+            headerRight: () => (
+                <View style={[Style.circle, Style.ombre, { backgroundColor: '#457ce0', marginRight: 10 }]}>
+                    <Ionicons name={type + "-add"} size={25} color="white" onPress={() => bs.current.snapTo(0)} />
+                </View>
+            ),
+        });
+    }, [props.navigation]);
+
+    
     const numberText = (text) => {
         let numreg = /^[0-9]+$/;
         if (text) {
@@ -35,37 +109,24 @@ const Home = () => {
                     [{ text: 'Ok' }]
                 );
             }
-        }
-    }
-
-    const showBottom = (value) => {
-        if (value) {
-            setId(value.id)
-            setProduit(value.title)
-            setPrix(value.prix.toString())
         } else {
-            setId('')
-            setProduit('')
             setPrix('')
         }
-        bs.current.snapTo(0)
     }
 
     const renderHeader = () => {
         return (
             <View style={Style.bsheader}>
                 <View style={Style.panelHandle}></View>
-                <MaterialIcons name="close" size={24} color="black" style={{
-                    padding: 5, backgroundColor: '#fff', borderRadius: 50,
-                    position: 'absolute', right: 10, top: 5, elevation: 3,
-                    shadowColor: '#000', shadowOpacity: .3,
-                }} onPress={() => bs.current.snapTo(1)} />
+                <View style={[Style.circle, Style.ombre, { backgroundColor: '#fff', padding: 5, position: 'absolute', right: 10, top: 5, }]}>
+                    <MaterialIcons name="close" size={24} color="black" onPress={() => bs.current.snapTo(1)} />
+                </View>
             </View>
         )
     }
 
     const renderContent = () => {
-        return <View style={[Style.bottomShettContent]}>
+        return <KeyboardAvoidingView style = {Style.bottomShettContent} behavior={Platform.OS === "ios" ? "padding" : "height"}>
             <TextInput style={Style.input}
                 onChangeText={text => setProduit(text)}
                 value={produit} placeholder = "Produit"
@@ -75,15 +136,17 @@ const Home = () => {
                 value={prix} placeholder = "Prix" keyboardType='numeric'
             />
 
-            <TouchableOpacity style = {[Style.btn, {backgroundColor: '#3cadd5'}]}>
+            <TouchableOpacity style={[Style.btn, { backgroundColor: '#3cadd5' }]}
+                onPress = {() => saveData()}
+            >
                 <Text style = {Style.txtBtn}>
                     Enregister
                 </Text>
             </TouchableOpacity>
-        </View>
+        </KeyboardAvoidingView>
     }
 
-    return (
+    return loading ? <Loading/> : (
         <View style={Style.container}>
             <BottomSheet
                 ref={bs}
@@ -114,7 +177,7 @@ const Home = () => {
                 )}
                 renderItem={({ item, index }) => {
                     const inputRange = [-1, 0, 70 * index, 70 * (index + 2)] 
-                    
+                    let id = index+1
                     const opacityInputRange = [-1, 0, 70 * index, 70 * (index + .3)]
 
                     const scale = scrollY.interpolate({
@@ -128,35 +191,26 @@ const Home = () => {
                     })
 
                     return <Animated.View>
-                        <TouchableOpacity onPress={() => showBottom(item)}
-                            style={[Style.inline, {
-                            padding: 10, marginBottom: 10, backgroundColor: 'rgba(255, 255, 255, 0.8)', borderRadius: 12,
-                            shadowColor: '#000', shadowOpacity: .3, shadowRadius: 20,
-                            shadowOffset: { width: 0, height: 10 }, elevation: 3,
-                            transform: [{scale}], opacity
-                        }]}>
-                            <Text style={[Style.text, { padding: 10, backgroundColor: '#00000040', borderRadius: 50, marginLeft: 10}]}>
-                                {item.id < 9 ? '0' + item.id : item.id}
-                            </Text>
+                        <TouchableOpacity 
+                            style={[Style.inline, Style.rectangle, { transform: [{ scale }], opacity }]}>
+                            <View style={Style.circle}>
+                                <Text style={[Style.text]}>
+                                    {id <= 9 ? '0' + id : id}
+                                </Text>
+                            </View>
                             <View style={{ marginLeft: 15 }}>
-                                <Text style={[Style.text, {fontFamily: 'avenirBlack', fontSize: 15}]}>{item.title}</Text>
-                                <Text style={Style.text}>{item.prix} F</Text>
+                                <Text style={[Style.text, {fontFamily: 'avenirBlack', fontSize: 15}]}>{item.libelle}</Text>
+                                <Text style={[Style.text, {marginTop : 5}]}>{item.prix} F</Text>
                             </View>
                         </TouchableOpacity>
-                        <Entypo name="trash" size={24} color="red"
-                            onPress={() => alert('ok')} 
-                            style={{
-                                position: 'absolute', right: 10, top: 5,
-                                padding: 5, backgroundColor: '#fff', borderRadius: 50,
-                                elevation: 3, shadowColor: '#000', shadowOpacity: .3,
-                            }}
-                        />
+                        <View style={[Style.circle, Style.ombre, {position: 'absolute', right: 10, top: 5, backgroundColor: '#fff',}]}>
+                            <Entypo name="trash" size={24} color="red"
+                                onPress={() => delData(item.ref)}
+                            />
+                        </View>
                     </Animated.View>
                 }}
             />
-            <TouchableOpacity style={Style.add} onPress={() => showBottom(false)}>
-                <Text style={Style.addText}>+</Text>
-            </TouchableOpacity>
         </View>
     )
 }
